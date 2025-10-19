@@ -58,7 +58,7 @@ st.header("📘 Current Semester — Enter Marks")
 num_subjects = st.number_input("Number of subjects this semester:", min_value=1, max_value=15, value=5, step=1)
 
 subjects = []
-total_points = 0
+total_points = 0.0
 total_credits = 0
 
 st.write("### Enter subject name, marks and credit hours for each subject")
@@ -76,19 +76,19 @@ for i in range(num_subjects):
     subjects.append({
         "Subject": subject or f"Subject {i+1}",
         "Marks": marks,
-        "Credit Hours": credits,
+        "Credit Hours": int(credits),
         "Grade Point": round(gpa, 2),
         "Letter": gpa_to_letter(gpa),
         "Quality Points": round(gpa * credits, 2)
     })
     total_points += gpa * credits
-    total_credits += credits
+    total_credits += int(credits)
 
 # --- GPA Calculation ---
 if total_credits > 0:
     current_gpa = total_points / total_credits
 else:
-    current_gpa = 0
+    current_gpa = 0.0
 
 # --- Display current GPA ---
 st.subheader("📊 Current Semester GPA")
@@ -118,7 +118,7 @@ st.caption(f"Combined total credits (previous + current): {int(prev_credits + to
 # --- Show detailed table ---
 df = pd.DataFrame(subjects)
 
-# Add totals row for convenience
+# Add totals row for convenience using pd.concat (safe for modern pandas)
 if not df.empty:
     totals = {
         "Subject": "Total",
@@ -128,7 +128,7 @@ if not df.empty:
         "Letter": "",
         "Quality Points": round(total_points, 2)
     }
-    df_totals = df.append(totals, ignore_index=True)
+    df_totals = pd.concat([df, pd.DataFrame([totals])], ignore_index=True)
 else:
     df_totals = df
 
@@ -145,7 +145,7 @@ st.write("Optionally estimate your **next semester GPA** and **projected CGPA** 
 proj_subjects = st.number_input("Number of planned subjects for next semester:", min_value=0, max_value=15, value=0, step=1, key="proj_count")
 
 proj_list = []
-proj_total_points = 0
+proj_total_points = 0.0
 proj_total_credits = 0
 
 if proj_subjects > 0:
@@ -162,18 +162,18 @@ if proj_subjects > 0:
         proj_list.append({
             "Subject": pname or f"Planned {k+1}",
             "Expected Marks": pmarks,
-            "Credit Hours": pcredits,
-            "Grade Point": round(pgpa,2),
+            "Credit Hours": int(pcredits),
+            "Grade Point": round(pgpa, 2),
             "Letter": gpa_to_letter(pgpa),
             "Quality Points": round(pgpa * pcredits, 2)
         })
         proj_total_points += pgpa * pcredits
-        proj_total_credits += pcredits
+        proj_total_credits += int(pcredits)
 
     if proj_total_credits > 0:
         projected_sem_gpa = proj_total_points / proj_total_credits
     else:
-        projected_sem_gpa = 0
+        projected_sem_gpa = 0.0
 
     st.subheader("📈 Projected Next Semester GPA")
     st.write(f"**Projected GPA for next semester:** `{projected_sem_gpa:.2f}`")
@@ -183,11 +183,8 @@ if proj_subjects > 0:
     # Base CGPA uses prev_cgpa & prev_credits plus current semester already done
     base_total_credits = prev_credits + total_credits
     base_cgpa = new_cgpa  # this already includes current semester
-    # If user hasn't provided prev_credits (0), base is simply current semester
-    if base_total_credits < 0:
-        base_total_credits = 0
 
-    if base_total_credits + proj_total_credits > 0:
+    if (base_total_credits + proj_total_credits) > 0:
         combined_quality = base_cgpa * base_total_credits + projected_sem_gpa * proj_total_credits
         projected_overall_cgpa = combined_quality / (base_total_credits + proj_total_credits)
     else:
@@ -197,7 +194,7 @@ if proj_subjects > 0:
     st.write(f"**Projected CGPA after adding next semester:** `{projected_overall_cgpa:.2f}`")
     st.caption(f"Projected combined credits: {int(base_total_credits + proj_total_credits)}")
 
-    # show projection details table
+    # show projection details table using pd.concat
     pdf = pd.DataFrame(proj_list)
     if not pdf.empty:
         p_totals = {
@@ -208,7 +205,7 @@ if proj_subjects > 0:
             "Letter": "",
             "Quality Points": round(proj_total_points, 2)
         }
-        pdf = pdf.append(p_totals, ignore_index=True)
+        pdf = pd.concat([pdf, pd.DataFrame([p_totals])], ignore_index=True)
     st.write("### Planned Semester Details")
     st.dataframe(pdf, use_container_width=True)
 else:
